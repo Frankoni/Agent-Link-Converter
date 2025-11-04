@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agent Link Converter — Standalone</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#0ea5a3;--glass:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+    body{background:linear-gradient(180deg,#071025 0%, #0b1220 100%);color:#e6eef6;padding:28px}
+    .app{max-width:980px;margin:0 auto}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .controls{display: flex;flex-direction: column;gap: 16px;}
+    textarea#inputLinks{min-height:120px;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;resize:vertical}
+    .actions{display:flex;flex-direction:column;gap:8px}
+    button.primary{background:var(--accent);border:none;padding:10px 12px;border-radius:8px;color:#052023;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px;border-radius:8px;cursor:pointer}
+
+    .meta{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .badge{background:var(--glass);padding:6px 8px;border-radius:8px;font-size:13px;color:var(--muted)}
+
+    #errorArea{margin-top:12px;color:#ffb4a2}
+
+    .results{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);display:flex;gap:12px;align-items:center}
+    .logo{width:56px;height:56px;border-radius:8px;object-fit: cover;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);overflow:hidden}
+    .logo img{max-width:100%;max-height:100%;object-fit: contain}
+    .card-body{flex:1}
+    .card-title{font-weight:600;margin:0 0 6px 0}
+    .card-sub{font-size:12px;color:var(--muted);word-break:break-all}
+    .card-actions{display:flex;gap:8px;margin-top:8px}
+    .small-btn{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--muted);cursor:pointer}
+
+    .raw-title{font-weight:700;color:var(--accent);padding:6px 8px;border-radius:6px;background:rgba(14,165,163,0.08)}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+    .agent-selection {
+  background: linear-gradient(180deg, #111727, #0d1422);
+  padding: 1rem;
+  border-radius: 12px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.agent-selection p {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #9aa4b2;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.agent-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.agent-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.agent-option:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.07);
+}
+
+.agent-option input[type="checkbox"] {
+  transform: scale(1.1);
+  accent-color: #00bcd4;
+  margin-right: 0.5rem;
+}
+
+.agent-option span {
+  flex: 1;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #dce3ec;
+}
+/* Input + Convert button bar */
+.input-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 1rem;
+  max-width: 2000px;       /* Limit total width for aesthetics */
+  margin-left: auto;
+  margin-right: auto;     /* Center horizontally */
+}
+
+#inputLinks {
+  flex: 1;
+  padding: 0.75rem 1rem;  /* Taller input field */
+  border-radius: 10px;
+  border: 1px solid #2b3245;
+  background: #0f1424;
+  color: #fff;
+  font-size: 1rem;
+  min-width: 400px;       /* Wider field */
+}
+
+#convertBtn {
+  background: #3f8cff;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  padding: 0.75rem 1.4rem;  /* Bigger vertically + horizontally */
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+#convertBtn:hover {
+  background: #5ea2ff;
+  transform: scale(1.10);   /* Slight pop on hover */
+}
+
+
+
+/* Copy All button smaller and lighter */
+button.small {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+}
+
+/* Agent dropdown styling */
+.agent-dropdown {
+  margin-bottom: 1rem;
+}
+
+#toggleAgentsBtn {
+  display: inline-block;
+  width: 100%;
+  background: #1e2230;
+  color: #dce3ec;
+  border: 1px solid #2b3245;
+  border-radius: 8px;
+  padding: 0.6rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+#toggleAgentsBtn:hover {
+  background: #2a3044;
+  border-color: #3b4560;
+}
+
+/* Hide/show agent filter box */
+.agent-selection.hidden {
+  display: none;
+}
+
+.agent-selection {
+  margin-top: 0.6rem;
+  background: #141824;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #2b3245;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.agent-selection label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #d0d6e0;
+}
+
+/* Optional – animate dropdown */
+.agent-selection {
+  transition: all 0.25s ease;
+}
+
+
+  
+
+    @media (max-width:720px){.controls{grid-template-columns:1fr}.actions {display: flex;flex-direction: column;gap: 10px;margin-top: 1rem; align-items: stretch;}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Agent Link Converter</h1>
+        <p class="lead">Paste one or many product links (Taobao / 1688 / Weidian / agent-wrapped). Produces raw links + agent links with affiliate params. Click a card to open or copy.</p>
+      </div>
+    </header>
+
+    <div class="panel">
+     <div class="input-bar">
+  <input id="inputLinks" type="text" placeholder="Paste your product link here">
+  <button id="convertBtn">Convert</button>
+</div>
+
+<div class="agent-dropdown">
+  <button id="toggleAgentsBtn" class="ghost">Select Agents ▼</button>
+  <div id="agentSelection" class="agent-selection hidden">
+    <!-- Your agent checkboxes go here -->
+    <label><input type="checkbox" class="agent-checkbox" value="Sugargoo"> Sugargoo</label>
+    <label><input type="checkbox" class="agent-checkbox" value="Superbuy"> Superbuy</label>
+    <label><input type="checkbox" class="agent-checkbox" value="Hoobuy"> Hoobuy</label>
+    <label><input type="checkbox" class="agent-checkbox" value="AllChinaBuy"> AllChinaBuy</label>
+    <label><input type="checkbox" class="agent-checkbox" value="AcBuy"> AcBuy</label>
+    <label><input type="checkbox" class="agent-checkbox" value="CNFans"> CNFans</label>
+    <label><input type="checkbox" class="agent-checkbox" value="OrientDig"> OrientDig</label>
+    <label><input type="checkbox" class="agent-checkbox" value="Mulebuy"> Mulebuy</label>
+    <label><input type="checkbox" class="agent-checkbox" value="Oopbuy"> Oopbuy</label>
+    <label><input type="checkbox" class="agent-checkbox" value="Kakobuy"> Kakobuy</label>
+  </div>
+</div>
+
+<div class="actions">
+  <button id="copyAllBtn" class="ghost small">Copy All Links</button>
+    <div class="meta">
+    <div class="badge" id="countBadge">0 links</div>
+    <div class="badge" id="successBadge">0 converted</div>
+    <div class="badge" id="failedBadge">0 failed</div>
+  </div>
+</div>
+
+
+
+       
+
+      <div id="errorArea" role="status" aria-live="polite"></div>
+
+      <div class="results" id="result"></div>
+    </div>
+
+    <footer>Tip: add agent logos to <code>images/agent-logos/</code> named after the agent keys (e.g. <code>Superbuy.webp</code>). Defaults to text box if logo missing.</footer>
+  </div>
+
+  <script>
+    // ---------------------------
+    // Configuration (JSON-driven)
+    // ---------------------------
+    const AGENTS = {
+      "Raw Link": { template: "{raw}", logo: "" },
+      "AllChinaBuy": { template: "https://www.allchinabuy.com/en/page/buy/?from=search-input&url={encodedRaw}&partnercode=EL8UwR", logo: "images/agent-logos/AllChinaBuy logo.png" },
+      "AcBuy": { template: "https://www.acbuy.com/product/?id={id}&source={sourceCode}&u=3E279S", logo: "images/agent-logos/AcBuy logo.png" },
+      "CNFans": { template: "https://cnfans.com/product/?shop_type={shop_type}&id={id}&ref=16298951", logo: "images/agent-logos/CnFans logo.png" },
+      "OrientDig": { template: "https://orientdig.com/product/?shop_type={shop_type}&id={id}&ref=100031422", logo: "images/agent-logos/OrientDig logo.png" },
+      "Sugargoo": { template: "https://www.sugargoo.com/#/home/productDetail?productLink={encodedRaw}&memberId=2750422633167316101", logo: "images/agent-logos/SugarGoo logo.png" },
+      "Superbuy": { template: "https://www.superbuy.com/en/page/buy?from=search-input&url={encodedRaw}&partnercode=ELZK3R", logo: "images/agent-logos/SuperBuy logo.png" },
+      "Mulebuy": { template: "https://mulebuy.com/product/?shop_type={shop_type}&id={id}&ref=200678354", logo: "images/agent-logos/Mulebuy logo.png" },
+      "Hoobuy": { template: "https://www.hoobuy.com/product/{hoobuyCode}/{id}?utm_source=yEk3JNwE", logo: "images/agent-logos/HooBuy logo.png" },
+      "Oopbuy": { template: "https://www.oopbuy.com/product/{oopIndicator}/{id}?inviteCode=QJQ3MFU99", logo: "images/agent-logos/OopBuy logo.png" },
+      "Kakobuy": { template: "https://www.kakobuy.com/item/details?url={encodedRaw}&affcode=fra7p", logo: "images/agent-logos/Kakobuy logo.png" }
+    };
+
+    // Helper: safe element text
+    function setText(el, text) { el.textContent = text || ''; }
+
+    // ---------------------------
+    // URL & ID extraction logic
+    // ---------------------------
+    function normalizeUrlCandidate(input) {
+      // Trim, remove surrounding <> if paste from slack, etc.
+      let s = input.trim();
+      if (!s) return null;
+      s = s.replace(/^<+|>+$/g, '');
+      return s;
+    }
+
+    function tryParseURL(s) {
+      try {
+        return new URL(s);
+      } catch (e) {
+        // Might be missing protocol: try adding https
+        try {
+          return new URL('https://' + s);
+        } catch (e2) {
+          return null;
+        }
+      }
+    }
+
+    function extractProductID(urlStr) {
+      // Accept string input and return {id, platform, raw, reason}
+      const url = tryParseURL(urlStr);
+      if (!url) return { id: null, platform: null, raw: null, reason: 'invalid_url' };
+      const host = url.hostname;
+      const full = urlStr;
+
+      // common direct patterns
+      // Taobao: ...id=123 OR /item.htm?id=123
+      if (/taobao\.com|tmall\.com/.test(host) || full.includes('item.taobao')) {
+        const m = full.match(/[?&]id=(\d{4,})/);
+        if (m) {
+          const id = m[1];
+          return { id, platform: 'taobao', raw: `https://item.taobao.com/item.htm?id=${id}` };
+        }
+        // mobile detail path (some variants)
+        const m2 = full.match(/\/detail\/(\d+)/);
+        if (m2) {
+          return { id: m2[1], platform: 'taobao', raw: `https://item.taobao.com/item.htm?id=${m2[1]}` };
+        }
+        // short links / redirects cannot be expanded here
+        return { id: null, platform: 'taobao', raw: null, reason: 'needs_redirect_resolution' };
+      }
+
+      if (/1688\.com/.test(host) || full.includes('offer/')) {
+        const m = full.match(/offer\/(\d+)\.html/);
+        if (m) return { id: m[1], platform: '1688', raw: `https://detail.1688.com/offer/${m[1]}.html` };
+        return { id: null, platform: '1688', raw: null, reason: 'needs_redirect_resolution' };
+      }
+
+      if (/weidian\.com/.test(host) || full.includes('weidian.com')) {
+        const m = full.match(/[?&](?:itemID|itemId)=(\d+)/);
+        if (m) return { id: m[1], platform: 'weidian', raw: `https://weidian.com/item.html?itemID=${m[1]}` };
+        const m2 = full.match(/weidian\.com\/item\/(\d+)/);
+        if (m2) return { id: m2[1], platform: 'weidian', raw: `https://weidian.com/item.html?itemID=${m2[1]}` };
+        return { id: null, platform: 'weidian', raw: null, reason: 'needs_redirect_resolution' };
+      }
+
+      // Agent/wrapper sites
+      const agentHosts = [ 'acbuy.com','cnfans.com','orientdig.com','sugargoo.com','allchinabuy.com','superbuy.com','mulebuy.com','hoobuy.com','oopbuy.com','kakobuy.com' ];
+      if (agentHosts.some(h => host.includes(h))) {
+        return extractFromAgent(full);
+      }
+
+      // special domains: tb.cn (short links) or s.click.taobao.com
+      if (/tb\.cn|t\.cn|s\.click\.taobao\.com|m\.tb\.cn/.test(host)) {
+        return { id: null, platform: null, raw: null, reason: 'shortlink' };
+      }
+
+      return { id: null, platform: null, raw: null, reason: 'unsupported_domain' };
+    }
+
+    function extractFromAgent(url) {
+      // Best-effort decoding by inspecting query params and common patterns.
+      try {
+        const u = tryParseURL(url);
+        const host = u ? u.hostname : url;
+        const qs = u ? u.searchParams : null;
+        let id = null, platform = null, raw = null;
+
+        if (host.includes('acbuy.com')) {
+          id = qs.get('id') || (url.match(/id=(\d+)/) || [])[1];
+          platform = url.includes('source=TB') ? 'taobao' : url.includes('source=AL') ? '1688' : 'weidian';
+        } else if (host.includes('cnfans.com') || host.includes('orientdig.com')) {
+          id = qs.get('id') || (url.match(/id=(\d+)/) || [])[1];
+          platform = url.includes('shop_type=taobao') ? 'taobao' : url.includes('shop_type=ali_1688') ? '1688' : 'weidian';
+        } else if (host.includes('sugargoo.com')) {
+          const m = url.match(/[?&]productLink=([^&]+)/);
+          if (m) {
+            const decoded = decodeURIComponent(m[1]);
+            return extractProductID(decoded); // recursive parse original
+          }
+        } else if (host.includes('allchinabuy.com')) {
+          const m = url.match(/[?&]url=([^&]+)/);
+          if (m) {
+            const decoded = decodeURIComponent(m[1]);
+            return extractProductID(decoded);
+          }
+        } else if (host.includes('superbuy.com') || host.includes('kakobuy.com')) {
+          const m = url.match(/[?&](?:url|productLink)=([^&]+)/);
+          if (m) {
+            const decoded = decodeURIComponent(m[1]);
+            return extractProductID(decoded);
+          }
+        } else if (host.includes('mulebuy.com')) {
+          id = qs.get('id') || (url.match(/id=(\d+)/) || [])[1];
+          platform = url.includes('shop_type=taobao') ? 'taobao' : url.includes('shop_type=ali_1688') ? '1688' : 'weidian';
+        } else if (host.includes('hoobuy.com')) {
+          const m = url.match(/hoobuy\.com\/product\/(\d+)\/(\d+)/);
+          if (m) { const code = m[1]; id = m[2]; platform = code==='1' ? 'taobao' : code==='0' ? '1688' : 'weidian'; }
+        } else if (host.includes('oopbuy.com')) {
+          const m = url.match(/oopbuy\.com\/product\/([^\/]+)\/(\d+)/);
+          if (m) { const indicator = m[1]; id = m[2]; platform = (indicator==='1' || indicator.toLowerCase()==='taobao') ? 'taobao' : (indicator==='0' || indicator.toLowerCase()==='1688') ? '1688' : 'weidian'; }
+        } else if (host.includes('kakobuy.com')) {
+          const encoded = qs.get('url') || url.match(/[?&]url=([^&]+)/); 
+          if (encoded) {
+            const decoded = decodeURIComponent(qs.get('url') || encoded[1]);
+            return extractProductID(decoded);
+          }
+        }
+
+        if (!id && platform) {
+          // if platform known but id missing, return with reason
+          return { id: null, platform, raw: null, reason: 'extracted_platform_only' };
+        }
+
+        if (id && platform) {
+          if (platform==='taobao') raw = `https://item.taobao.com/item.htm?id=${id}`;
+          if (platform==='1688') raw = `https://detail.1688.com/offer/${id}.html`;
+          if (platform==='weidian') raw = `https://weidian.com/item.html?itemID=${id}`;
+          return { id, platform, raw };
+        }
+
+        return { id: null, platform: null, raw: null, reason: 'agent_parse_failed' };
+      } catch (err) {
+        return { id: null, platform: null, raw: null, reason: 'agent_parse_error' };
+      }
+    }
+
+    // ---------------------------
+    // Link building & UI
+    // ---------------------------
+    function buildAgentLink(agentKey, ctx) {
+      const a = AGENTS[agentKey];
+      if (!a) return null;
+      return a.template.replace(/\{(.*?)\}/g, (_, key) => {
+        if (key === 'encodedRaw') return encodeURIComponent(ctx.raw || '');
+        if (key === 'encodedLink') return encodeURIComponent(ctx.raw || '');
+        if (key === 'raw') return ctx.raw || '';
+        if (key === 'id') return ctx.id || '';
+        if (key === 'platform') return ctx.platform || '';
+        if (key === 'sourceCode') return ctx.platform === 'taobao' ? 'TB' : ctx.platform === '1688' ? 'AL' : 'WD';
+        if (key === 'shop_type') return ctx.platform === 'taobao' ? 'taobao' : ctx.platform === '1688' ? 'ali_1688' : 'weidian';
+        if (key === 'hoobuyCode') return ctx.platform === 'taobao' ? '1' : ctx.platform === '1688' ? '0' : '2';
+        if (key === 'oopIndicator') return ctx.platform === 'taobao' ? '1' : ctx.platform === '1688' ? '0' : 'weidian';
+        return '';
+      });
+    }
+
+    function createCard(agentKey, link, context) {
+      const container = document.createElement('div');
+      container.className = 'card';
+
+      const logoWrap = document.createElement('div');
+      logoWrap.className = 'logo';
+      const logoImg = document.createElement('img');
+      const cfg = AGENTS[agentKey] || {};
+      logoImg.src = cfg.logo || '';
+      logoImg.alt = agentKey + ' logo';
+      logoImg.onerror = () => {
+        logoImg.style.display = 'none';
+        const fallback = document.createElement('div'); fallback.style.padding='6px'; fallback.style.fontSize='12px'; fallback.style.color='var(--muted)'; fallback.textContent = agentKey;
+        logoWrap.appendChild(fallback);
+      };
+      logoWrap.appendChild(logoImg);
+
+      const body = document.createElement('div'); body.className = 'card-body';
+      const title = document.createElement('div'); title.className='card-title'; title.textContent = agentKey;
+      const sub = document.createElement('div'); sub.className='card-sub';
+      sub.textContent = link;
+
+      const actions = document.createElement('div'); actions.className='card-actions';
+      const openBtn = document.createElement('button'); openBtn.className='small-btn'; openBtn.textContent='Open';
+      openBtn.addEventListener('click', () => window.open(link, '_blank'));
+      const copyBtn = document.createElement('button'); copyBtn.className='small-btn'; copyBtn.textContent='Copy';
+      copyBtn.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(link); copyBtn.textContent='Copied'; setTimeout(()=>copyBtn.textContent='Copy',1400); } catch(e){ alert('Copy failed: ' + e.message); }
+      });
+
+      actions.appendChild(openBtn); actions.appendChild(copyBtn);
+
+      body.appendChild(title); body.appendChild(sub); body.appendChild(actions);
+      container.appendChild(logoWrap); container.appendChild(body);
+      return container;
+    }
+
+    // ---------------------------
+    // Main convert function
+    // ---------------------------
+    document.getElementById('convertBtn').addEventListener('click', () => {
+      const rawInput = document.getElementById('inputLinks').value;
+      const items = rawInput.split(/\r?\n/).map(normalizeUrlCandidate).filter(Boolean);
+      const resultDiv = document.getElementById('result'); resultDiv.innerHTML='';
+      const errorArea = document.getElementById('errorArea'); errorArea.textContent='';
+
+      setText(document.getElementById('countBadge'), `${items.length} links`);
+      if (!items.length) { errorArea.textContent = 'Please paste one or more links (one per line).'; setText(document.getElementById('failedBadge'),'0 failed'); setText(document.getElementById('successBadge'),'0 converted'); return; }
+
+      let success = 0, failed = 0;
+      const generatedLinks = [];
+       const selectedAgents = Array.from(
+        document.querySelectorAll('#agentSelection input[type="checkbox"]:checked')
+        ).map(cb => cb.value);
+
+      items.forEach(input => {
+        const extracted = extractProductID(input);
+
+        if (!extracted.id && extracted.raw) {
+          // sometimes raw exists but id missing
+        }
+
+        if (!extracted.id && ['needs_redirect_resolution','shortlink','invalid_url','unsupported_domain','agent_parse_failed'].includes(extracted.reason)) {
+          // show an inline failure card with reason
+          const failCard = document.createElement('div'); failCard.className='card';
+          const body = document.createElement('div'); body.className='card-body';
+          const title = document.createElement('div'); title.className='card-title'; title.textContent = 'Failed to parse';
+          const sub = document.createElement('div'); sub.className='card-sub';
+          sub.textContent = `${input} — ${extracted.reason || 'unknown reason'}`;
+          body.appendChild(title); body.appendChild(sub);
+          failCard.appendChild(body);
+          resultDiv.appendChild(failCard);
+          failed++;
+          return;
+        }
+
+        // If we have platform but no raw, try to build raw
+        if (!extracted.raw && extracted.id && extracted.platform) {
+          if (extracted.platform === 'taobao') extracted.raw = `https://item.taobao.com/item.htm?id=${extracted.id}`;
+          if (extracted.platform === '1688') extracted.raw = `https://detail.1688.com/offer/${extracted.id}.html`;
+          if (extracted.platform === 'weidian') extracted.raw = `https://weidian.com/item.html?itemID=${extracted.id}`;
+        }
+
+        if (!extracted.id) {
+          // unknown failure
+          const failCard = document.createElement('div'); failCard.className='card';
+          const body = document.createElement('div'); body.className='card-body';
+          const title = document.createElement('div'); title.className='card-title'; title.textContent = 'Failed to parse';
+          const sub = document.createElement('div'); sub.className='card-sub'; sub.textContent = `${input} — could not extract ID or raw link`;
+          body.appendChild(title); body.appendChild(sub);
+          failCard.appendChild(body);
+          resultDiv.appendChild(failCard);
+          failed++;
+          return;
+        }
+
+        // Build context
+        const ctx = { id: extracted.id, platform: extracted.platform, raw: extracted.raw };
+
+  // Collect selected agent keys from checkboxes
+const selectedAgents = Array.from(
+  document.querySelectorAll('#agentSelection input[type="checkbox"]:checked')
+).map(cb => cb.value);
+
+// For each selected agent, produce a card
+for (const agentKey of selectedAgents) {
+  const built = buildAgentLink(agentKey, ctx);
+  if (!built) continue;
+  generatedLinks.push(built);
+  const card = createCard(agentKey, built, ctx);
+  resultDiv.appendChild(card);
+}
+
+        success++;
+      });
+
+      setText(document.getElementById('successBadge'), `${success} converted`);
+      setText(document.getElementById('failedBadge'), `${failed} failed`);
+
+      // Save generated links to copy-all button dataset
+      document.getElementById('copyAllBtn').dataset.links = JSON.stringify(generatedLinks);
+
+      if (failed > 0) {
+        errorArea.textContent = `${failed} links failed to convert. Short links (like tb.cn) or deeply-wrapped redirects may need server-side expansion.`;
+      }
+    });
+
+    // Copy all handler
+    document.getElementById('copyAllBtn').addEventListener('click', async () => {
+      const dataset = document.getElementById('copyAllBtn').dataset.links;
+      if (!dataset) return alert('No generated links to copy. Convert first.');
+      const links = JSON.parse(dataset);
+      try { await navigator.clipboard.writeText(links.join('\n')); alert('Copied ' + links.length + ' links to clipboard'); } catch(e){ alert('Failed to copy all: ' + e.message); }
+    });
+
+    // Small convenience: Ctrl+Enter to convert
+    document.getElementById('inputLinks').addEventListener('keydown', (ev) => { if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') document.getElementById('convertBtn').click(); });
+    // === DROPDOWN TOGGLE ===
+document.getElementById("toggleAgentsBtn").addEventListener("click", () => {
+  const selection = document.getElementById("agentSelection");
+  const button = document.getElementById("toggleAgentsBtn");
+  const isHidden = selection.classList.toggle("hidden");
+  button.textContent = isHidden ? "Select Agents ▼" : "Hide Agents ▲";
+  localStorage.setItem("agentDropdownOpen", !isHidden);
+});
+
+// === AGENT SELECTION PERSISTENCE ===
+function saveAgentSelections() {
+  const selected = [];
+  document.querySelectorAll('.agent-checkbox:checked').forEach(cb => {
+    selected.push(cb.value);
+  });
+  localStorage.setItem('selectedAgents', JSON.stringify(selected));
+}
+
+function loadAgentSelections() {
+  const saved = JSON.parse(localStorage.getItem('selectedAgents') || "[]");
+
+  // If first time, preselect a few
+  if (saved.length === 0) {
+    saved.push("Sugargoo", "Superbuy", "Hoobuy");
+  }
+
+  saved.forEach(agent => {
+    const checkbox = document.querySelector(`.agent-checkbox[value="${agent}"]`);
+    if (checkbox) checkbox.checked = true;
+  });
+}
+
+function initAgentPersistence() {
+  const checkboxes = document.querySelectorAll('.agent-checkbox');
+  checkboxes.forEach(cb => cb.addEventListener('change', saveAgentSelections));
+  loadAgentSelections();
+
+  // Restore dropdown open/closed state
+  const wasOpen = JSON.parse(localStorage.getItem("agentDropdownOpen"));
+  const selection = document.getElementById("agentSelection");
+  const button = document.getElementById("toggleAgentsBtn");
+  if (wasOpen) {
+    selection.classList.remove("hidden");
+    button.textContent = "Hide Agents ▲";
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initAgentPersistence);
+
+  </script>
+</body>
+</html>
